@@ -7,7 +7,9 @@ objects is responsible for [brief description here].
 from sqlalchemy import Column, Integer, String, Sequence, ForeignKey, create_engine
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+
 from moveme.utils.barcode_printer import BarcodePrinter
+from moveme.utils.timestamp import make_timestamp
 
 Base = declarative_base()
 
@@ -18,12 +20,14 @@ class Box(Base):
     box_uuid = Column(String, nullable=False)
     description = Column(String, nullable=True)
     location = Column(String, nullable=True)
+    last_modified = Column(String, nullable=True)
 
     def __init__(self, description, box_uuid, location=None):
         self.box_uuid = box_uuid
         self.description = description
         if location:
             self.location = location
+        self.last_modified = make_timestamp()
 
     def __repr__(self):
         return "<Box ID %s: %s (current location: %s)>" %(self.box_uuid, self.description, self.location)
@@ -35,6 +39,7 @@ class Item(Base):
     item_uuid = Column(String, nullable=False)
     description = Column(String, nullable=True)
     in_box = Column(String, ForeignKey('boxes.box_uuid'), nullable=True)
+    last_modified = Column(String, nullable=True)
 
     box = relationship("Box", backref=backref('items', order_by=internal_id))
 
@@ -43,6 +48,7 @@ class Item(Base):
         self.description = description
         if in_box:
             self.in_box = in_box
+        self.last_modified = make_timestamp()
 
     def __repr__(self):
         return "<Item ID %s: %s>" % (self.item_uuid, self.description)
@@ -68,7 +74,7 @@ class Application(object):
         box = self.sessh.query(Box).filter(Box.box_uuid == box_uuid)
         description = description or box[0].description
         location = location or box[0].location
-        box.update({"description": description, "location": location}, synchronize_session='evaluate')
+        box.update({"description": description, "location": location, "last_modified": make_timestamp()}, synchronize_session='evaluate')
         self.sessh.commit()
 
     def query_boxes(self):
@@ -98,7 +104,7 @@ class Application(object):
         item = self.sessh.query(Item).filter(Item.item_uuid == item_uuid)
         description = description or item[0].description
         in_box = in_box or item[0].in_box
-        item.update({"description": description, "in_box": in_box}, synchronize_session='evaluate')
+        item.update({"description": description, "in_box": in_box, "last_modified": make_timestamp()}, synchronize_session='evaluate')
         self.sessh.commit()
 
     def query_items(self, by_box=None):

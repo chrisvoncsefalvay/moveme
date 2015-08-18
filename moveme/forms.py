@@ -25,6 +25,7 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
         self.wg_in_box = self.add(npyscreen.TitleCombo,
                                   name="Box UUID: ",
                                   values=self.parentApp.application_logic.query_boxids())
+        self.wg_last_modified = self.add(npyscreen.TitleFixedText, name="Last modified")
         self.print_button = self.add(PrintItemUUIDButton, name="Item label", relx=-18, rely=10)
         self.print_box = self.add(PrintBoxRefButton, name="Box label", relx=-18, rely=8)
 
@@ -33,15 +34,17 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
             self.preexisting_item=True
             record = self.parentApp.application_logic.query_item_by_uuid(self.value)
             self.name = record.item_uuid
+            self.wg_last_modified.value = record.last_modified
             self.wg_uuid.value = record.item_uuid
             self.wg_description.value = record.description
-            self.wg_in_box.value = self.parentApp.application_logic.query_boxids()[record.in_box]
+            self.wg_in_box.value = self.parentApp.application_logic.query_boxids().index(record.in_box)
         else:
             self.preexisting_item=False
             self.name = "New item"
             self.wg_uuid.value = generate_UUID("item")
             self.wg_description.value = ""
             self.wg_in_box.value = ""
+            self.wg_last_modified.value = "Just now"
         self.wg_in_box.values = self.parentApp.application_logic.query_boxids()
 
     def on_ok(self):
