@@ -76,6 +76,11 @@ class Application(object):
 
         return [[box.box_uuid, box.description, box.location] for box in result]
 
+    def query_boxids(self):
+        result = self.sessh.query(Box).filter().all()
+
+        return [box.box_uuid for box in result]
+
     def query_box_by_uuid(self, uuid):
         return self.sessh.query(Box).filter(Box.box_uuid == uuid).all()[0]
 

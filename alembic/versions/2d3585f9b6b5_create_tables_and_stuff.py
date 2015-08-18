@@ -21,7 +21,7 @@ def upgrade():
                     sa.Column('internal_id', sa.Integer, primary_key=True),
                     sa.Column('box_uuid', sa.String(63), nullable=False),
                     sa.Column('description', sa.String(255)),
-                    sa.Column('location', sa.String(63)))
+                    sa.Column('location', sa.Integer, nullable=True))
     op.create_table('items',
                     sa.Column('internal_id', sa.Integer, primary_key=True),
                     sa.Column('item_uuid', sa.String(63), nullable=False),

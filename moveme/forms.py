@@ -11,7 +11,7 @@ class PrintItemUUIDButton(npyscreen.ButtonPress):
 class PrintBoxRefButton(npyscreen.ButtonPress):
 
     def whenPressed(self):
-        if self.parent.wg_in_box.value is not "None":
+        if len(self.parent.wg_in_box.value) == 12:
             self.parent.parentApp.application_logic.label(self.parent.wg_in_box.value)
             npyscreen.notify_wait("Printing box reference label. Please wait.")
         else:
@@ -22,7 +22,9 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
         self.value = None
         self.wg_uuid = self.add(npyscreen.TitleFixedText, name="Item UUID: ")
         self.wg_description = self.add(npyscreen.TitleText, use_two_lines=False, name="Description: ")
-        self.wg_in_box = self.add(npyscreen.TitleText, name="Box UUID: ")
+        self.wg_in_box = self.add(npyscreen.TitleCombo,
+                                  name="Box UUID: ",
+                                  values=self.parentApp.application_logic.query_boxids())
         self.print_button = self.add(PrintItemUUIDButton, name="Item label", relx=-18, rely=10)
         self.print_box = self.add(PrintBoxRefButton, name="Box label", relx=-18, rely=8)
 
@@ -33,23 +35,24 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
             self.name = record.item_uuid
             self.wg_uuid.value = record.item_uuid
             self.wg_description.value = record.description
-            self.wg_in_box.value = record.in_box
+            self.wg_in_box.value = self.parentApp.application_logic.query_boxids()[record.in_box]
         else:
             self.preexisting_item=False
             self.name = "New item"
             self.wg_uuid.value = generate_UUID("item")
             self.wg_description.value = ""
             self.wg_in_box.value = ""
+        self.wg_in_box.values = self.parentApp.application_logic.query_boxids()
 
     def on_ok(self):
         if self.preexisting_item:
             self.parentApp.application_logic.alter_item_by_uuid(item_uuid=self.wg_uuid.value,
                                                                 description=self.wg_description.value,
-                                                                in_box=self.wg_in_box.value[0:12])
+                                                                in_box=self.parentApp.application_logic.query_boxids()[self.wg_in_box.value] or None)
         else:
             self.parentApp.application_logic.create_item(item_uuid=self.wg_uuid.value,
                                                          description=self.wg_description.value or None,
-                                                         in_box=self.wg_in_box.value[0:12] or None)
+                                                         in_box=self.parentApp.application_logic.query_boxids()[self.wg_in_box.value] or None)
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
@@ -116,7 +119,13 @@ class PopupBoxEditor(npyscreen.ActionPopupWide):
         self.value = None
         self.wg_uuid = self.add(npyscreen.TitleFixedText, name="Box UUID: ")
         self.wg_description = self.add(npyscreen.TitleText, use_two_lines=False, name="Description: ")
-        self.wg_location = self.add(npyscreen.TitleText, name="Location: ")
+        self.wg_location = self.add(npyscreen.TitleCombo, name="Status: ", values=['In progress',
+                                                                                 'Packed and open',
+                                                                                 'Sealed',
+                                                                                 'Loaded',
+                                                                                 'Unloaded',
+                                                                                 'Opened',
+                                                                                 'Unpacked'])
         self.print_box = self.add(PrintItemUUIDButton, name="Box label", relx=-18, rely=8)
 
     def beforeEditing(self):
