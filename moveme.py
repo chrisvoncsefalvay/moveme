@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env
+#  coding=utf-8
 
 """
 moveme is responsible for [brief description here].
