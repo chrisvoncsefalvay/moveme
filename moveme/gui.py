@@ -1,8 +1,11 @@
-import npyscreen, curses
-from forms import *
+import npyscreen
+
+from moveme.db.objects import Application
+from moveme.forms import ItemListDisplay, BoxListDisplay, PopupBoxEditor, PopupItemEditor
+
 import yaml
 from os import path, getcwd
-from moveme.db.objects import Application
+
 
 class MoveApp(npyscreen.NPSAppManaged):
     def onStart(self):

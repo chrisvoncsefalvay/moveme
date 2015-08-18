@@ -1,6 +1,8 @@
+from types import NoneType
 import npyscreen
 from sys import exit
 from utils.generate_uuid import generate_UUID
+from moveme.utils.timestamp import make_timestamp
 
 class PrintItemUUIDButton(npyscreen.ButtonPress):
 
@@ -11,8 +13,13 @@ class PrintItemUUIDButton(npyscreen.ButtonPress):
 class PrintBoxRefButton(npyscreen.ButtonPress):
 
     def whenPressed(self):
-        if len(self.parent.wg_in_box.value) == 12:
-            self.parent.parentApp.application_logic.label(self.parent.wg_in_box.value)
+        try:
+            _val = self.parent.parentApp.application_logic.query_boxids()[self.parent.wg_in_box.value]
+        except Exception as e:
+            _val = None
+
+        if _val:
+            self.parent.parentApp.application_logic.label(_val)
             npyscreen.notify_wait("Printing box reference label. Please wait.")
         else:
             npyscreen.notify_wait("Sorry, but I cannot print you a box label if you don't have a box selected.")
@@ -125,14 +132,26 @@ class ItemList(npyscreen.MultiLineAction):
 
 class ItemListDisplay(npyscreen.FormMuttActive):
     MAIN_WIDGET_CLASS = ItemList
+    MAIN_WIDGET_CLASS_START_LINE = 1
+    COMMAND_WIDGET_CLASS = npyscreen.FixedText
 
     def beforeEditing(self):
         self.update_list()
 
     def update_list(self):
         self.wMain.values = self.parentApp.application_logic.query_items()
-        self.wMain.display()
 
+        if type(self.wMain.values) is NoneType:
+            table_size = 0
+        else:
+            table_size = len(self.wMain.values)
+
+        self.wMain.values = self.parentApp.application_logic.query_items()
+        self.wStatus1.value = "ITEM ENTRY PANEL \t \t Registering %s items in total." % table_size
+        self.wStatus2.value = "Press ^N to create a new box. Press ^T to switch to item management."
+        self.wCommand.value = "To search and filter, press 'l'."
+
+        self.wMain.display()
 
 # PopupBoxEditor
 
@@ -148,6 +167,7 @@ class PopupBoxEditor(npyscreen.ActionPopupWide):
                                                                                  'Unloaded',
                                                                                  'Opened',
                                                                                  'Unpacked'])
+        self.wg_last_modified = self.add(npyscreen.TitleFixedText, name="Last modified: ")
         self.print_box = self.add(PrintItemUUIDButton, name="Box label", relx=-18, rely=8)
 
     def beforeEditing(self):
@@ -158,28 +178,28 @@ class PopupBoxEditor(npyscreen.ActionPopupWide):
             self.wg_uuid.value = record.box_uuid
             self.wg_description.value = record.description
             self.wg_location.value = record.location
+            self.wg_last_modified = record.last_modified
         else:
             self.preexisting_item=False
             self.name = "New box"
             self.wg_uuid.value = generate_UUID("box")
             self.wg_description.value = ""
             self.wg_location.value = ""
+            self.wg_last_modified = "Just now"
 
     def on_ok(self):
         if self.preexisting_item:
             self.parentApp.application_logic.alter_box_by_uuid(box_uuid=self.wg_uuid.value,
-                                                                description=self.wg_description.value,
-                                                                location=self.wg_location.value)
+                                                               description=self.wg_description.value,
+                                                               location=self.wg_location.value)
         else:
             self.parentApp.application_logic.create_box(box_uuid=self.wg_uuid.value,
-                                                         description=self.wg_description.value or None,
-                                                         location=self.wg_location.value or None)
+                                                        description=self.wg_description.value or None,
+                                                        location=self.wg_location.value or None)
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
         self.parentApp.switchFormPrevious()
-
-
 
 # BoxList
 
@@ -228,12 +248,14 @@ class BoxListDisplay(npyscreen.FormMuttActive):
         self.update_list()
 
     def update_list(self):
-        try:
-            table_size = len(self.parentApp.application_logic.query_boxes())
-        except TypeError:
-            table_size = 1
 
         self.wMain.values = self.parentApp.application_logic.query_boxes()
+
+        if type(self.wMain.values) is NoneType:
+            table_size = 0
+        else:
+            table_size = len(self.wMain.values)
+
         self.wStatus1.value = "BOX ENTRY PANEL \t \t Registering %s boxes in total." % table_size
         self.wStatus2.value = "Press ^N to create a new box. Press ^T to switch to item management."
         self.wCommand.value = "To search and filter, press 'l'."

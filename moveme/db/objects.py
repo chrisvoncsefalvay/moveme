@@ -30,7 +30,7 @@ class Box(Base):
         self.last_modified = make_timestamp()
 
     def __repr__(self):
-        return "<Box ID %s: %s (current location: %s)>" %(self.box_uuid, self.description, self.location)
+        return "<Box ID %s: %s (current location: %s)>" % (self.box_uuid, self.description, self.location)
 
 class Item(Base):
     __tablename__ = 'items'
@@ -91,9 +91,14 @@ class Application(object):
 
         return [box.box_uuid for box in result]
 
+    def get_enclosing_box(self, item_uuid):
+        return self.sessh.query(Item).filter(item_uuid == item_uuid).all()[0].in_box
+
     def query_box_by_uuid(self, uuid):
         return self.sessh.query(Box).filter(Box.box_uuid == uuid).all()[0]
 
+    def get_box_manifest(self, box_uuid):
+        return self.sessh.query(Item).filter(Item.in_box == box_uuid).all()
 
     def create_item(self, *args, **kwargs):
         item = Item(**kwargs)
