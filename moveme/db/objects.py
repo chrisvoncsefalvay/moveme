@@ -68,6 +68,10 @@ class Application(object):
 
     def delete_box_by_uuid(self, box_uuid):
         self.sessh.query(Box).filter(Box.box_uuid == box_uuid).delete(synchronize_session='evaluate')
+
+        affected_items = self.sessh.query(Item).filter(Item.in_box == box_uuid).all()
+        for each in affected_items:
+            each.in_box = ""
         self.sessh.commit()
 
     def alter_box_by_uuid(self, box_uuid, description=None, location=None):

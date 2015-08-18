@@ -6,7 +6,7 @@ class PrintItemUUIDButton(npyscreen.ButtonPress):
 
     def whenPressed(self):
         self.parent.parentApp.application_logic.label(self.parent.wg_uuid.value)
-        npyscreen.notify_wait("Printing UUID label. Please wait.")
+        npyscreen.notify_wait("Printing item reference label. Please wait.")
 
 class PrintBoxRefButton(npyscreen.ButtonPress):
 
@@ -37,7 +37,18 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
             self.wg_last_modified.value = record.last_modified
             self.wg_uuid.value = record.item_uuid
             self.wg_description.value = record.description
-            self.wg_in_box.value = self.parentApp.application_logic.query_boxids().index(record.in_box)
+
+            try:
+                associated_box_value = self.parentApp.application_logic.query_boxids().index(record.in_box)
+            except ValueError:
+                npyscreen.notify(message="It looks like the box this item as associated with has been deleted. "
+                                         "No worries, though - the box assignment of this item has now been zeroed.",
+                                 title="Data integrity error",
+                                 form_color="STANDOUT")
+
+                associated_box_value = ""
+
+            self.wg_in_box.value = associated_box_value
         else:
             self.preexisting_item=False
             self.name = "New item"
@@ -48,14 +59,22 @@ class PopupItemEditor(npyscreen.ActionPopupWide):
         self.wg_in_box.values = self.parentApp.application_logic.query_boxids()
 
     def on_ok(self):
+        if type(self.wg_in_box.value) is int:
+            try:
+                box = self.parentApp.application_logic.query_boxids()[self.wg_in_box.value]
+            except IndexError, TypeError:
+                box = None
+        else:
+            box = None
+
         if self.preexisting_item:
             self.parentApp.application_logic.alter_item_by_uuid(item_uuid=self.wg_uuid.value,
                                                                 description=self.wg_description.value,
-                                                                in_box=self.parentApp.application_logic.query_boxids()[self.wg_in_box.value] or None)
+                                                                in_box=box)
         else:
             self.parentApp.application_logic.create_item(item_uuid=self.wg_uuid.value,
                                                          description=self.wg_description.value or None,
-                                                         in_box=self.parentApp.application_logic.query_boxids()[self.wg_in_box.value] or None)
+                                                         in_box=box)
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
@@ -175,6 +194,7 @@ class BoxList(npyscreen.MultiLineAction):
             "^T": self.switch_view,
         })
 
+
     def when_add_box(self, *args, **kwargs):
         self.parent.parentApp.getForm("POPUPBOX").value = None
         self.parent.parentApp.switchForm("POPUPBOX")
@@ -196,16 +216,27 @@ class BoxList(npyscreen.MultiLineAction):
         self.parent.parentApp.switchForm("POPUPBOX")
 
     def display_value(self, vl):
-        return("%s" % (vl[0]))
+        return("%s: %s" % (vl[0], vl[1]))
 
 class BoxListDisplay(npyscreen.FormMuttActive):
     MAIN_WIDGET_CLASS = BoxList
+    MAIN_WIDGET_NAME = "Box list"
+    MAIN_WIDGET_CLASS_START_LINE = 1
+    COMMAND_WIDGET_CLASS = npyscreen.FixedText
 
     def beforeEditing(self):
         self.update_list()
 
     def update_list(self):
+        try:
+            table_size = len(self.parentApp.application_logic.query_boxes())
+        except TypeError:
+            table_size = 1
+
         self.wMain.values = self.parentApp.application_logic.query_boxes()
+        self.wStatus1.value = "BOX ENTRY PANEL \t \t Registering %s boxes in total." % table_size
+        self.wStatus2.value = "Press ^N to create a new box. Press ^T to switch to item management."
+        self.wCommand.value = "To search and filter, press 'l'."
         self.wMain.display()
 
 
